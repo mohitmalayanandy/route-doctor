@@ -4,7 +4,7 @@
 
 **Open-source route, redirect and indexability diagnostics for web developers.**
 
-RouteDoctor is an early-stage, dependency-free Node.js CLI. It checks a single HTTP(S) page, traces redirects, checks its basic canonical/indexability signals, and probes the site's conventional `robots.txt` and `sitemap.xml` paths.
+RouteDoctor is an early-stage, lightweight Node.js CLI. It checks a single HTTP(S) page, traces redirects, checks its basic canonical/indexability signals, and probes the site's conventional `robots.txt` and `sitemap.xml` paths.
 
 > **Status: pre-release starter v0.1.0.** This is not a full crawler, SEO compliance certificate, Google indexing validator, or published npm package. It is designed for contributors to extend.
 
@@ -15,13 +15,14 @@ Developers shipping React/Next.js apps can accidentally introduce redirect chain
 ## Requirements
 
 - Node.js 22 or later
-- No external npm dependencies
+- One small runtime dependency, [parse5](https://github.com/inikulin/parse5), for spec-compliant HTML parsing (installed by `npm install`)
 
 ## Run locally
 
 ```bash
 git clone https://github.com/mohitmalayanandy/route-doctor.git
 cd route-doctor
+npm install
 npm test
 npm run scan -- https://example.com
 npm run scan -- https://example.com --json

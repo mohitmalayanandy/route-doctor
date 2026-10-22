@@ -34,6 +34,9 @@ For exit code 2, JSON mode returns `{ "error": "Error: ..." }` for scan executio
 failures; argument parsing failures write usage to stderr and emit no JSON.
 These failures are not diagnostic reports.
 
-The v0.1 HTML parser handles common markup only. Sitemap checks verify endpoint
+HTML is parsed with parse5 following the HTML specification, so comments,
+script/noscript text, entities and quoted `>` behave as in a browser. Title,
+canonical and robots meta are read from `<head>` only, and a relative canonical
+resolves against `<base href>` when one is present. Sitemap checks verify endpoint
 presence, not XML validity. Private-network restrictions and crawling remain
 future work.
