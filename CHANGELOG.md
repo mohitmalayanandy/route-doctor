@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Changed
+- Pages larger than 512,000 bytes are analysed from their first 512,000 bytes and reported with a `BODY_TRUNCATED` warning instead of failing with `BODY_READ_FAILED`.
+
 ### Fixed
 - Treat the robots `none` directive as `noindex`, and stop flagging value directives such as `max-image-preview:none`.
 - Restore missing GitHub Actions CI and contributor issue templates.

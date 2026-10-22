@@ -85,6 +85,19 @@ test('meta robots none is an error but max-image-preview:none is not', async () 
   }
 });
 
+test('pages over the body limit are analysed from their head with a warning', async () => {
+  await withServer((req, res) => {
+    if (req.url !== '/big') return fixture(req, res);
+    res.writeHead(200, {'content-type': 'text/html'}).end(
+      `<html><head><title>Big</title><link rel="canonical" href="http://${req.headers.host}/big"></head><body>${'x'.repeat(600_000)}</body></html>`);
+  }, async url => {
+    const report = await scanSite(`${url}/big`);
+    assert.equal(report.summary.errors, 0);
+    assert.ok(report.checks.some(c => c.code === 'BODY_TRUNCATED' && c.severity === 'warning'));
+    assert.ok(report.checks.some(c => c.code === 'CANONICAL_MATCH'));
+  });
+});
+
 test('missing title and canonical are warnings', async () => {
   await withServer(fixture, async (url) => {
     const report = await scanSite(`${url}/missing-title`);

@@ -1,5 +1,5 @@
 const REDIRECT_CODES = new Set([301, 302, 303, 307, 308]);
-const MAX_BODY_BYTES = 512_000;
+export const MAX_BODY_BYTES = 512_000;
 
 export function parseHttpUrl(value) {
   let url;
@@ -12,27 +12,34 @@ export function parseHttpUrl(value) {
   return url;
 }
 
+/** Read at most MAX_BODY_BYTES; the head of a page is what the checks need. */
 async function readLimitedText(response) {
-  if (!response.body) return '';
+  if (!response.body) return { text: '', truncated: false };
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let count = 0;
   let text = '';
+  let truncated = false;
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+      const room = MAX_BODY_BYTES - count;
+      if (value.byteLength > room) {
+        text += decoder.decode(value.subarray(0, room), { stream: true });
+        truncated = true;
+        break;
+      }
       count += value.byteLength;
-      if (count > MAX_BODY_BYTES) throw new Error(`Response body exceeds ${MAX_BODY_BYTES} bytes`);
       text += decoder.decode(value, { stream: true });
     }
-    return text + decoder.decode();
+    return { text: text + decoder.decode(), truncated };
   } finally {
     await reader.cancel().catch(() => {});
   }
 }
 
-/** Fetch with explicit redirect tracing and a conservative response size cap. */
+/** Fetch with explicit redirect tracing and a response size cap; larger bodies are truncated. */
 export async function fetchWithTrace(input, { timeoutMs = 8000, maxRedirects = 8 } = {}) {
   const initial = parseHttpUrl(input);
   initial.hash = '';
@@ -76,14 +83,15 @@ export async function fetchWithTrace(input, { timeoutMs = 8000, maxRedirects = 8
       continue;
     }
     try {
-      const body = await readLimitedText(response);
+      const { text, truncated } = await readLimitedText(response);
       return {
         ok: true,
         finalUrl: target,
         redirects,
         status: response.status,
         headers: Object.fromEntries(response.headers.entries()),
-        body
+        body: text,
+        truncated
       };
     } catch (e) {
       return { ok: false, errorCode: 'BODY_READ_FAILED', error: `Could not read ${target}: ${e.message}`, redirects, finalUrl: target };

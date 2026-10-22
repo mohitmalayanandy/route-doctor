@@ -25,12 +25,24 @@ test('request timeout returns FETCH_FAILED', async () => {
   });
 });
 
-test('response body over the limit returns BODY_READ_FAILED', async () => {
+test('response body over the limit is truncated, not rejected', async () => {
   await withServer((req, res) => res.writeHead(200, { 'content-type': 'text/plain' }).end('a'.repeat(MAX_BODY_BYTES + 1)), async (url) => {
+    const result = await fetchWithTrace(url);
+    assert.equal(result.ok, true);
+    assert.equal(result.truncated, true);
+    assert.equal(result.body.length, MAX_BODY_BYTES);
+  });
+});
+
+test('connection dropped mid-body returns BODY_READ_FAILED', async () => {
+  await withServer((req, res) => {
+    res.writeHead(200, { 'content-type': 'text/plain', 'content-length': '1000' });
+    res.write('partial');
+    setTimeout(() => res.destroy(), 20);
+  }, async (url) => {
     const result = await fetchWithTrace(url);
     assert.equal(result.ok, false);
     assert.equal(result.errorCode, 'BODY_READ_FAILED');
-    assert.match(result.error, /exceeds 512000 bytes/);
   });
 });
 
@@ -39,6 +51,7 @@ test('response body exactly at the limit succeeds', async () => {
     const result = await fetchWithTrace(url);
     assert.equal(result.ok, true);
     assert.equal(result.status, 200);
+    assert.equal(result.truncated, false);
     assert.equal(result.body.length, MAX_BODY_BYTES);
   });
 });

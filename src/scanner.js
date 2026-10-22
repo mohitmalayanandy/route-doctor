@@ -1,4 +1,4 @@
-import { fetchWithTrace, parseHttpUrl } from './http.js';
+import { fetchWithTrace, parseHttpUrl, MAX_BODY_BYTES } from './http.js';
 
 const check = (severity, code, message) => ({ severity, code, message });
 
@@ -51,6 +51,9 @@ function addPageChecks(page, checks) {
   if (!/text\/html|application\/xhtml\+xml/i.test(contentType)) {
     checks.push(check('warning', 'NOT_HTML', `Page Content-Type is ${contentType || '(missing)'}; skipping HTML signals`));
     return;
+  }
+  if (page.truncated) {
+    checks.push(check('warning', 'BODY_TRUNCATED', `Page is larger than ${MAX_BODY_BYTES} bytes; only the first ${MAX_BODY_BYTES} were analysed`));
   }
   const metadata = getPageMetadata(page.body);
   if (!metadata.title) checks.push(check('warning', 'TITLE_MISSING', 'Missing or empty HTML title'));
