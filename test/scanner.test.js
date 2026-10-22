@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
-import { scanSite, getAttributes, getPageMetadata } from '../src/scanner.js';
+import { scanSite, getAttributes, getPageMetadata, hasNoindex } from '../src/scanner.js';
 
 async function withServer(handler, fn) {
   const server = createServer(handler);
@@ -60,6 +60,29 @@ test('x-robots noindex is an error', async () => {
     const report = await scanSite(`${url}/noindex`);
     assert.ok(report.checks.some(c => c.code === 'NOINDEX'));
   });
+});
+
+test('noindex detection handles none, agent prefixes and value directives', () => {
+  const cases = [
+    ['noindex', true], ['NoIndex, follow', true], ['none', true], ['noindex nofollow', true],
+    ['googlebot: noindex', true], ['googlebot:none', true],
+    ['unavailable_after: 25 Jun 2030 15:00:00 PST, noindex', true],
+    ['index, follow', false], ['nofollow', false], ['noneofthese', false], ['', false],
+    ['max-image-preview:none', false], ['max-image-preview: none, max-snippet: -1', false],
+    ['googlebot: max-image-preview: none', false]
+  ];
+  for (const [value, expected] of cases) assert.equal(hasNoindex(value), expected, value);
+});
+
+test('meta robots none is an error but max-image-preview:none is not', async () => {
+  for (const [content, expected] of [['none', 'NOINDEX'], ['max-image-preview:none', 'NO_NOINDEX']]) {
+    await withServer((req, res) => {
+      res.writeHead(200, {'content-type': 'text/html'}).end(`<title>T</title><meta name="robots" content="${content}">`);
+    }, async url => {
+      const report = await scanSite(url);
+      assert.ok(report.checks.some(c => c.code === expected), content);
+    });
+  }
 });
 
 test('missing title and canonical are warnings', async () => {

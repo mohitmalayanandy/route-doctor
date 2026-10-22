@@ -11,6 +11,11 @@ uppercase `code`, and a human-readable `message`. Use codes, not message text,
 for automation. `summary` counts each severity. Checks appear in page, robots,
 then sitemap order regardless of network completion order.
 
+`NOINDEX` is raised when a robots meta tag or `X-Robots-Tag` header contains
+`noindex` or `none` (which implies `noindex, nofollow`). A user-agent prefix such
+as `googlebot: noindex` counts; value directives such as `max-image-preview:none`
+do not.
+
 `inputUrl` is the parsed input URL. `finalUrl` is the last resolved HTTP target;
 on a redirect failure it may not have been fetched. `status` is null if no final
 response was read successfully. `redirects` records ordered `{from, status, to}`

@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Fixed
+- Treat the robots `none` directive as `noindex`, and stop flagging value directives such as `max-image-preview:none`.
 - Restore missing GitHub Actions CI and contributor issue templates.
 - Detect robots.txt blanket disallow rules and preserve trailing slashes in canonical comparison.
 - Ignore fragments when tracing HTTP redirects and order site-file diagnostics deterministically.

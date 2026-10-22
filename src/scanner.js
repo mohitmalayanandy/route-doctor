@@ -28,6 +28,15 @@ export function normalizeComparableUrl(value) {
   return u.href;
 }
 
+// Directives that carry a value; "max-image-preview:none" must not read as `none`.
+const VALUE_DIRECTIVES = /(?:max-snippet|max-image-preview|max-video-preview|unavailable_after)\s*:[^,]*/g;
+
+/** True if a robots meta / X-Robots-Tag value has `noindex` or its alias `none`. */
+export function hasNoindex(value) {
+  return value.toLowerCase().replace(VALUE_DIRECTIVES, '').split(',').some(token =>
+    token.replace(/^\s*[\w-]+\s*:/, '').split(/\s+/).some(word => word === 'noindex' || word === 'none'));
+}
+
 function addPageChecks(page, checks) {
   if (!page.ok) {
     checks.push(check('error', page.errorCode, page.error));
@@ -46,8 +55,7 @@ function addPageChecks(page, checks) {
   const metadata = getPageMetadata(page.body);
   if (!metadata.title) checks.push(check('warning', 'TITLE_MISSING', 'Missing or empty HTML title'));
   else checks.push(check('pass', 'TITLE_PRESENT', 'HTML title detected'));
-  const robotsContent = `${metadata.robots},${page.headers['x-robots-tag'] ?? ''}`;
-  if (/(?:^|[,\s])noindex(?:\s|,|$)/i.test(robotsContent)) {
+  if (hasNoindex(`${metadata.robots},${page.headers['x-robots-tag'] ?? ''}`)) {
     checks.push(check('error', 'NOINDEX', 'Page contains a noindex directive'));
   } else checks.push(check('pass', 'NO_NOINDEX', 'No noindex directive detected'));
   if (metadata.canonicals.length === 0) {
