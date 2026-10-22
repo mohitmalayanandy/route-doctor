@@ -14,7 +14,7 @@ Thanks for helping build RouteDoctor!
 ## Development principles
 
 - Start with clear, actionable diagnostics and avoid false certainty.
-- Favor no-dependency solutions unless a dependency clearly improves reliability.
+- Favor no-dependency solutions unless a dependency clearly improves reliability. The only runtime dependency is `parse5`: regular expressions mishandle comments, script text, entities and quoted `>` in HTML. Justify any new dependency the same way.
 - Keep network requests limited, visible, and safe.
 - Avoid making unverifiable indexing claims; Google indexing is not controlled by this tool.
 - Do not send private page content or secrets into logs or issues.

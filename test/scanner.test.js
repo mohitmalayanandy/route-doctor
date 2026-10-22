@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
-import { scanSite, getAttributes, getPageMetadata } from '../src/scanner.js';
+import { scanSite, getPageMetadata, hasNoindex } from '../src/scanner.js';
 
 async function withServer(handler, fn) {
   const server = createServer(handler);
@@ -25,9 +25,18 @@ function fixture(req, res) {
   return res.writeHead(200, { 'content-type':'text/html' }).end(`<html><head><title>Okay</title><link href="http://${req.headers.host}/" rel="canonical"></head></html>`);
 }
 
-test('extract attributes regardless of order', () => {
-  assert.deepEqual(getAttributes('<link href="/" rel="canonical">'), {href:'/', rel:'canonical'});
-  assert.deepEqual(getPageMetadata('<meta content="noindex,follow" name="robots">').robots, 'noindex,follow');
+test('metadata is read regardless of attribute order, case and quoting', () => {
+  assert.deepEqual(getPageMetadata('<link href="/" rel="canonical">').canonicals, ['/']);
+  assert.deepEqual(getPageMetadata("<LINK REL=canonical HREF='/'>").canonicals, ['/']);
+  assert.equal(getPageMetadata('<meta content="noindex,follow" name="robots">').robots, 'noindex,follow');
+});
+
+test('metadata decodes entities and ignores non-head and non-element content', () => {
+  assert.deepEqual(getPageMetadata('<link rel="canonical" href="/p?a=1&amp;b=2">').canonicals, ['/p?a=1&b=2']);
+  assert.equal(getPageMetadata('<title>Fish &amp; Chips\n  Bar</title>').title, 'Fish & Chips Bar');
+  assert.equal(getPageMetadata('<body><svg><title>icon</title></svg></body>').title, '');
+  assert.equal(getPageMetadata('<base href="/docs/"><base href="/ignored/">').baseHref, '/docs/');
+  assert.equal(getPageMetadata('<head></head><body><meta name="robots" content="noindex"></body>').robots, '');
 });
 
 test('healthy homepage gets a passing canonical', async () => {
@@ -59,6 +68,42 @@ test('x-robots noindex is an error', async () => {
   await withServer(fixture, async (url) => {
     const report = await scanSite(`${url}/noindex`);
     assert.ok(report.checks.some(c => c.code === 'NOINDEX'));
+  });
+});
+
+test('noindex detection handles none, agent prefixes and value directives', () => {
+  const cases = [
+    ['noindex', true], ['NoIndex, follow', true], ['none', true], ['noindex nofollow', true],
+    ['googlebot: noindex', true], ['googlebot:none', true],
+    ['unavailable_after: 25 Jun 2030 15:00:00 PST, noindex', true],
+    ['index, follow', false], ['nofollow', false], ['noneofthese', false], ['', false],
+    ['max-image-preview:none', false], ['max-image-preview: none, max-snippet: -1', false],
+    ['googlebot: max-image-preview: none', false]
+  ];
+  for (const [value, expected] of cases) assert.equal(hasNoindex(value), expected, value);
+});
+
+test('meta robots none is an error but max-image-preview:none is not', async () => {
+  for (const [content, expected] of [['none', 'NOINDEX'], ['max-image-preview:none', 'NO_NOINDEX']]) {
+    await withServer((req, res) => {
+      res.writeHead(200, {'content-type': 'text/html'}).end(`<title>T</title><meta name="robots" content="${content}">`);
+    }, async url => {
+      const report = await scanSite(url);
+      assert.ok(report.checks.some(c => c.code === expected), content);
+    });
+  }
+});
+
+test('pages over the body limit are analysed from their head with a warning', async () => {
+  await withServer((req, res) => {
+    if (req.url !== '/big') return fixture(req, res);
+    res.writeHead(200, {'content-type': 'text/html'}).end(
+      `<html><head><title>Big</title><link rel="canonical" href="http://${req.headers.host}/big"></head><body>${'x'.repeat(600_000)}</body></html>`);
+  }, async url => {
+    const report = await scanSite(`${url}/big`);
+    assert.equal(report.summary.errors, 0);
+    assert.ok(report.checks.some(c => c.code === 'BODY_TRUNCATED' && c.severity === 'warning'));
+    assert.ok(report.checks.some(c => c.code === 'CANONICAL_MATCH'));
   });
 });
 
@@ -116,7 +161,14 @@ test('canonical edge cases preserve URL semantics', async () => {
     ['<link rel="canonical" href="file:///page">', 'CANONICAL_INVALID'],
     ['<link rel="canonical" href="http://[">', 'CANONICAL_INVALID'],
     ['<link rel="canonical" href="/page"><link rel="canonical" href="/other">', 'CANONICAL_MULTIPLE'],
-    ['<link rel="canonical" href="">', 'CANONICAL_MISSING']
+    ['<link rel="canonical" href="">', 'CANONICAL_MISSING'],
+    ['<base href="/other/"><link rel="canonical" href="page">', 'CANONICAL_DIFFERENT'],
+    ['<base href="/"><link rel="canonical" href="page">', 'CANONICAL_MATCH'],
+    ['<link title="a>b" rel="canonical" href="/page">', 'CANONICAL_MATCH'],
+    ['<!-- <link rel="canonical" href="/other"> --><link rel="canonical" href="/page">', 'CANONICAL_MATCH'],
+    ['<script>document.write(\'<link rel="canonical" href="/other">\')</script><link rel="canonical" href="/page">', 'CANONICAL_MATCH'],
+    ['<noscript><link rel="canonical" href="/other"></noscript><link rel="canonical" href="/page">', 'CANONICAL_MATCH'],
+    ['<p>body starts</p><link rel="canonical" href="/page">', 'CANONICAL_MISSING']
   ];
   for (const [html, expected] of cases) {
     await withServer((req, res) => {

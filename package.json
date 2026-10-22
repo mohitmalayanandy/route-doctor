@@ -1,7 +1,7 @@
 {
   "name": "routedoctor",
   "version": "0.1.0",
-  "description": "A zero-dependency open-source CLI for web route, redirect, and indexability diagnostics",
+  "description": "A lightweight open-source CLI for web route, redirect, and indexability diagnostics",
   "type": "module",
   "private": true,
   "bin": {
@@ -36,5 +36,8 @@
     "bin/",
     "src/",
     "docs/diagnostic-result.schema.json"
-  ]
+  ],
+  "dependencies": {
+    "parse5": "^8.0.1"
+  }
 }
