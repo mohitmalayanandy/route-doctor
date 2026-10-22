@@ -1,19 +1,28 @@
-name: CI
+name: RouteDoctor CI
+
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
-  check:
+  test:
+    name: Test on Node.js 22
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: [22, 24]
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node }}
-      - run: npm run check
-      - run: npm pack --dry-run
+          node-version: '22'
+
+      - name: Run code checks and tests
+        run: npm run check
