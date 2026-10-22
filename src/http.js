@@ -34,7 +34,9 @@ async function readLimitedText(response) {
 
 /** Fetch with explicit redirect tracing and a conservative response size cap. */
 export async function fetchWithTrace(input, { timeoutMs = 8000, maxRedirects = 8 } = {}) {
-  let target = parseHttpUrl(input).href;
+  const initial = parseHttpUrl(input);
+  initial.hash = '';
+  let target = initial.href;
   const seen = new Set();
   const redirects = [];
   for (let hop = 0; hop <= maxRedirects; hop++) {
@@ -57,7 +59,11 @@ export async function fetchWithTrace(input, { timeoutMs = 8000, maxRedirects = 8
       await response.body?.cancel().catch(() => {});
       if (!location) return { ok: false, errorCode: 'MISSING_LOCATION', error: `HTTP ${response.status} without Location header at ${target}`, redirects, finalUrl: target };
       let next;
-      try { next = parseHttpUrl(new URL(location, target).href).href; }
+      try {
+        const resolved = parseHttpUrl(new URL(location, target).href);
+        resolved.hash = '';
+        next = resolved.href;
+      }
       catch { return { ok: false, errorCode: 'UNSAFE_REDIRECT', error: `Invalid redirect target: ${location}`, redirects, finalUrl: target }; }
       redirects.push({ from: target, status: response.status, to: next });
       if (seen.has(next)) {

@@ -4,7 +4,7 @@ Thanks for helping build RouteDoctor!
 
 ## Getting started
 
-1. Fork the GitHub repository after publication.
+1. Fork the GitHub repository.
 2. Create a focused branch: `git checkout -b fix/short-description`.
 3. Use Node.js 22+.
 4. Run `npm test` and `npm run check`.

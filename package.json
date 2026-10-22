@@ -1,5 +1,5 @@
 {
-  "name": "route-doctor-starter",
+  "name": "routedoctor",
   "version": "0.1.0",
   "description": "A zero-dependency open-source CLI for web route, redirect, and indexability diagnostics",
   "type": "module",
@@ -15,6 +15,26 @@
     "test": "node --test",
     "check": "node --check ./bin/routedoctor.js && node --check ./src/http.js && node --check ./src/scanner.js && node --test"
   },
-  "keywords": ["seo", "nextjs", "redirects", "canonical", "technical-seo", "cli"],
-  "license": "MIT"
+  "keywords": [
+    "seo",
+    "nextjs",
+    "redirects",
+    "canonical",
+    "technical-seo",
+    "cli"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mohitmalayanandy/route-doctor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mohitmalayanandy/route-doctor/issues"
+  },
+  "homepage": "https://github.com/mohitmalayanandy/route-doctor#readme",
+  "files": [
+    "bin/",
+    "src/",
+    "docs/diagnostic-result.schema.json"
+  ]
 }

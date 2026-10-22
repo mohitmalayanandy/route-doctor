@@ -2,7 +2,7 @@
 import { scanSite } from '../src/scanner.js';
 
 function usage() {
-  return `RouteDoctor v0.1.0 (starter)
+  return `RouteDoctor v0.1.0 (pre-release)
 
 Usage:
   routedoctor scan <https://example.com> [--json] [--timeout <ms>] [--max-redirects <n>]

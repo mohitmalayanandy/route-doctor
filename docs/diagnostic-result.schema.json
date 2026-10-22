@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RouteDoctor diagnostic report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "tool",
+    "version",
+    "inputUrl",
+    "finalUrl",
+    "redirects",
+    "status",
+    "checks",
+    "summary"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1"
+    },
+    "tool": {
+      "const": "routedoctor"
+    },
+    "version": {
+      "type": "string"
+    },
+    "inputUrl": {
+      "type": "string"
+    },
+    "finalUrl": {
+      "type": "string"
+    },
+    "status": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 100,
+      "maximum": 599
+    },
+    "redirects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "status",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              301,
+              302,
+              303,
+              307,
+              308
+            ]
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "severity",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "severity": {
+            "enum": [
+              "pass",
+              "warning",
+              "error"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]*$"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "errors",
+        "warnings",
+        "passed"
+      ],
+      "properties": {
+        "errors": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "passed": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

@@ -73,3 +73,80 @@ test('missing title and canonical are warnings', async () => {
 test('reject unsafe protocols', async () => {
   await assert.rejects(() => scanSite('file:///etc/passwd'), /Only http/);
 });
+
+test('redirect edge cases return structured errors', async () => {
+  const cases = [
+    ['/self', 301, '/self#fragment', 'REDIRECT_LOOP', {}],
+    ['/missing', 302, null, 'MISSING_LOCATION', {}],
+    ['/unsafe', 307, 'file:///tmp/page', 'UNSAFE_REDIRECT', {}],
+    ['/credentials', 308, 'https://user:pass@example.com/', 'UNSAFE_REDIRECT', {}],
+    ['/limit', 303, '/end', 'REDIRECT_LIMIT', { maxRedirects: 0 }]
+  ];
+  for (const [path, status, location, expected, options] of cases) {
+    await withServer((req, res) => {
+      res.writeHead(status, location === null ? {} : { location }).end();
+    }, async url => {
+      const report = await scanSite(url + path, options);
+      assert.ok(report.checks.some(c => c.code === expected), expected);
+      assert.equal(report.status, null);
+      assert.equal(report.summary.errors, 1);
+    });
+  }
+});
+
+test('exact redirect budget succeeds and relative locations resolve', async () => {
+  await withServer((req, res) => {
+    if (req.url === '/folder/old') return res.writeHead(308, {location: '../'}).end();
+    fixture(req, res);
+  }, async url => {
+    const report = await scanSite(url + '/folder/old', {maxRedirects: 1});
+    assert.equal(report.finalUrl, url + '/');
+    assert.equal(report.summary.errors, 0);
+    assert.equal(report.redirects.length, 1);
+  });
+});
+
+test('canonical edge cases preserve URL semantics', async () => {
+  const cases = [
+    ['<link rel="canonical" href="/page#section">', 'CANONICAL_MATCH'],
+    ["<LINK HREF='page' REL='alternate CANONICAL'>", 'CANONICAL_MATCH'],
+    ['<link rel="canonical" href="/page/">', 'CANONICAL_DIFFERENT'],
+    ['<link rel="canonical" href="/page?q=1">', 'CANONICAL_DIFFERENT'],
+    ['<link rel="canonical" href="https://example.org/page">', 'CANONICAL_DIFFERENT'],
+    ['<link rel="canonical" href="file:///page">', 'CANONICAL_INVALID'],
+    ['<link rel="canonical" href="http://[">', 'CANONICAL_INVALID'],
+    ['<link rel="canonical" href="/page"><link rel="canonical" href="/other">', 'CANONICAL_MULTIPLE'],
+    ['<link rel="canonical" href="">', 'CANONICAL_MISSING']
+  ];
+  for (const [html, expected] of cases) {
+    await withServer((req, res) => {
+      if (req.url !== '/page') return fixture(req, res);
+      res.writeHead(200, {'content-type': 'text/html'}).end('<title>Test</title>' + html);
+    }, async url => {
+      const report = await scanSite(url + '/page');
+      assert.ok(report.checks.some(c => c.code === expected), html);
+    });
+  }
+});
+
+test('robots warning and report ordering are stable across completion order', async () => {
+  await withServer((req, res) => {
+    if (req.url === '/robots.txt') {
+      return setTimeout(() => res.writeHead(200).end('User-agent: *\nDisallow: /'), 30);
+    }
+    fixture(req, res);
+  }, async url => {
+    const report = await scanSite(url);
+    assert.equal(report.schemaVersion, '1');
+    assert.deepEqual(report.checks.slice(-3).map(c => c.code), [
+      'ROBOTS_TXT_FOUND', 'ROBOTS_DISALLOW_REVIEW', 'SITEMAP_XML_FOUND'
+    ]);
+    for (const [severity, key] of [['error','errors'], ['warning','warnings'], ['pass','passed']]) {
+      assert.equal(report.summary[key], report.checks.filter(c => c.severity === severity).length);
+    }
+    for (const finding of report.checks) {
+      assert.deepEqual(Object.keys(finding).sort(), ['code', 'message', 'severity']);
+      assert.match(finding.code, /^[A-Z][A-Z0-9_]*$/);
+    }
+  });
+});

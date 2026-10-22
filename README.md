@@ -25,8 +25,6 @@ npm run scan -- https://example.com
 npm run scan -- https://example.com --json
 ```
 
-> The GitHub clone URL becomes valid **only after you create and push** the public repository. If using the starter ZIP, extract it and run `npm test` inside the folder.
-
 To install the local command on your machine:
 
 ```bash
@@ -36,6 +34,8 @@ routedoctor scan https://example.com --json --timeout 10000 --max-redirects 10
 ```
 
 The CLI exits with `0` when no errors are found, `1` if it detects errors, and `2` on invalid arguments. Warnings alone do not cause failure.
+
+The JSON report contract is documented in [docs/diagnostics.md](docs/diagnostics.md).
 
 ## Current checks (v0.1.0)
 
@@ -66,6 +66,7 @@ The CLI exits with `0` when no errors are found, `1` if it detects errors, and `
 - [x] README, licence, and contributor guide
 
 ### v0.2 — More reliable auditing
+- [ ] Evaluate TypeScript migration and structured HTML/XML parsing
 - [ ] Parse sitemap URLs and crawl a capped number of public same-origin pages
 - [ ] Robust HTML parser and robots.txt interpretation
 - [ ] Include route-level JSON and Markdown reports
@@ -75,6 +76,10 @@ The CLI exits with `0` when no errors are found, `1` if it detects errors, and `
 - [ ] Compare staging/production route health
 - [ ] GitHub Actions integration and baseline regression checks
 - [ ] Next.js-aware recommendations
+
+### v1.0 — Public stable release
+- [ ] Stable configuration, npm publication, and automated releases
+- [ ] Comprehensive documentation and contributor onboarding
 
 ## Contributing
 

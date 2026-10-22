@@ -25,7 +25,6 @@ export function getPageMetadata(html) {
 export function normalizeComparableUrl(value) {
   const u = parseHttpUrl(value);
   u.hash = '';
-  if (u.pathname.length > 1) u.pathname = u.pathname.replace(/\/+$/, '');
   return u.href;
 }
 
@@ -84,7 +83,7 @@ async function checkSiteFile(origin, filename, options, checks) {
   }
   if (result.status === 200) {
     checks.push(check('pass', `${codeBase}_FOUND`, `${filename} found`));
-    if (filename === 'robots.txt' && /^\s*disallow\s*:\s*\/\s*$/im.test(result.body)) {
+    if (filename === '/robots.txt' && /^\s*disallow\s*:\s*\/\s*$/im.test(result.body)) {
       checks.push(check('warning', 'ROBOTS_DISALLOW_REVIEW', 'robots.txt contains Disallow: /; review which user-agent it applies to'));
     }
   } else if (result.status === 404) {
@@ -103,13 +102,16 @@ export async function scanSite(inputUrl, options = {}) {
   addPageChecks(page, checks);
   if (page.ok) {
     const origin = new URL(page.finalUrl).origin;
-    await Promise.all([
-      checkSiteFile(origin, '/robots.txt', options, checks),
-      checkSiteFile(origin, '/sitemap.xml', options, checks)
-    ]);
+    const fileChecks = await Promise.all(['/robots.txt', '/sitemap.xml'].map(async filename => {
+      const findings = [];
+      await checkSiteFile(origin, filename, options, findings);
+      return findings;
+    }));
+    checks.push(...fileChecks.flat());
   }
   const count = (severity) => checks.filter(c => c.severity === severity).length;
   return {
+    schemaVersion: '1',
     tool: 'routedoctor',
     version: '0.1.0',
     inputUrl: url.href,
