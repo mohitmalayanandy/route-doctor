@@ -1,5 +1,7 @@
 # RouteDoctor 🩺
 
+[![RouteDoctor CI](https://github.com/mohitmalayanandy/route-doctor/actions/workflows/ci.yml/badge.svg)](https://github.com/mohitmalayanandy/route-doctor/actions/workflows/ci.yml)
+
 **Open-source route, redirect and indexability diagnostics for web developers.**
 
 RouteDoctor is an early-stage, dependency-free Node.js CLI. It checks a single HTTP(S) page, traces redirects, checks its basic canonical/indexability signals, and probes the site's conventional `robots.txt` and `sitemap.xml` paths.
